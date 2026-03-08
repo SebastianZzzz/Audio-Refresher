@@ -11,6 +11,7 @@ import android.os.Bundle;
 import android.provider.Settings;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.util.Log;
 
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -24,10 +25,9 @@ public class MainActivity extends AppCompatActivity {
     private final BroadcastReceiver uiReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            if (MonitorService.ACTION_UPDATE_UI.equals(intent.getAction())) {
-                int count = intent.getIntExtra("count", 0);
-                tvRefreshCount.setText("已自动刷新次数：" + count);
-            }
+            int count = intent.getIntExtra("count", 0);
+            android.util.Log.d("BiliMonitorLog", "UI 收到更新广播，次数: " + count);
+            tvRefreshCount.setText("刷新次数: " + count);
         }
     };
 

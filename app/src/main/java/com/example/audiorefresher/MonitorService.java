@@ -91,32 +91,45 @@ public class MonitorService extends Service {
                 topPackage = event.getPackageName();
             }
         }
+
+        Log.d(TAG, "当前检测到的顶层应用: " + topPackage);
         return topPackage;
     }
 
     private void refreshMediaStatus() {
         Log.d(TAG, "准备刷新媒体状态...");
+
+        // 强制先更新一下通知，证明逻辑跑到了这里
+        updateNotification("正在尝试刷新 B 站状态...");
+
         if (!Shizuku.pingBinder()) {
-            Log.e(TAG, "刷新失败: Shizuku Binder 不可用 (pingBinder 为 false)");
+            Log.e(TAG, "刷新失败: Shizuku Binder 不可用");
+            updateNotification("错误：Shizuku 未授权");
             return;
         }
 
         new Thread(() -> {
             try {
-                Log.d(TAG, "正在通过 Shizuku 执行 Shell 命令...");
-                Shizuku.newProcess(new String[]{"cmd", "media_session", "dispatch", "pause"}, null, null).waitFor();
-                Thread.sleep(300);
-                Shizuku.newProcess(new String[]{"cmd", "media_session", "dispatch", "play"}, null, null).waitFor();
+                // 尝试执行命令
+                Log.d(TAG, "执行 Shell 命令...");
+                Process p1 = Shizuku.newProcess(new String[]{"cmd", "media_session", "dispatch", "pause"}, null, null);
+                p1.waitFor();
+                Thread.sleep(500);
+                Process p2 = Shizuku.newProcess(new String[]{"cmd", "media_session", "dispatch", "play"}, null, null);
+                p2.waitFor();
 
                 refreshCount++;
                 Log.d(TAG, "刷新成功，当前次数: " + refreshCount);
-                updateNotification("已刷新播放状态 (" + refreshCount + " 次)");
+
+                // 更新通知和 UI
+                updateNotification("已成功刷新播放状态 (" + refreshCount + " 次)");
 
                 Intent intent = new Intent(ACTION_UPDATE_UI);
                 intent.putExtra("count", refreshCount);
                 sendBroadcast(intent);
             } catch (Exception e) {
-                Log.e(TAG, "Shizuku 执行过程中崩溃: " + e.getMessage());
+                Log.e(TAG, "Shizuku 执行失败: " + e.getMessage());
+                updateNotification("刷新失败: " + e.getMessage());
             }
         }).start();
     }
