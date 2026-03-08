@@ -5,7 +5,7 @@
     android:orientation="vertical"
     android:gravity="center"
     android:padding="20dp"
-    android:background="#212121"> <!-- 添加了深色背景以适配白色文字 -->
+    android:background="?android:attr/windowBackground">
 
     <!-- 顶部大标题 -->
     <TextView
@@ -23,8 +23,8 @@
         android:layout_height="wrap_content"
         android:text="使用情况权限: 未检查"
         android:textSize="16sp"
-        android:textColor="#BBBBBB"
-        android:layout_marginBottom="8dp"/>
+        android:textColor="?android:attr/textColorPrimary"
+        android:layout_marginBottom="10dp"/>
 
     <TextView
         android:id="@+id/tv_shizuku_status"
@@ -32,8 +32,8 @@
         android:layout_height="wrap_content"
         android:text="Shizuku 权限: 未检查"
         android:textSize="16sp"
-        android:textColor="#BBBBBB"
-        android:layout_marginBottom="30dp"/>
+        android:textColor="?android:attr/textColorPrimary"
+        android:layout_marginBottom="10dp"/>
 
     <TextView
         android:id="@+id/tv_notification_status"
@@ -41,7 +41,8 @@
         android:layout_height="wrap_content"
         android:text="通知权限：未检查"
         android:textSize="16sp"
-        android:layout_marginBottom="20dp"/>
+        android:textColor="?android:attr/textColorPrimary"
+        android:layout_marginBottom="40dp"/>
 
     <!-- 刷新次数：改为白色 -->
     <TextView
@@ -51,8 +52,18 @@
         android:text="刷新次数: 0"
         android:textSize="28sp"
         android:textStyle="bold"
-        android:textColor="#FFFFFF"
+        android:textColor="?android:attr/textColorPrimary"
         android:layout_marginBottom="40dp"/>
+
+    <Button
+        android:id="@+id/btn_select_apps"
+        android:layout_width="220dp"
+        android:layout_height="60dp"
+        android:text="选择被监听软件"
+        android:textSize="18sp"
+        android:backgroundTint="#3F51B5"
+        android:textColor="#FFFFFF"
+        android:layout_marginBottom="16dp"/>
 
     <Button
         android:id="@+id/btn_start"
