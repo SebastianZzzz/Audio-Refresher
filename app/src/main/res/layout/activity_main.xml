@@ -1,48 +1,58 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
+    android:gravity="center"
     android:padding="20dp"
-    android:gravity="center_horizontal">
+    android:background="#212121"> <!-- 添加了深色背景以适配白色文字 -->
 
+    <!-- 顶部大标题 -->
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Bili 状态监控器"
-        android:textSize="24sp"
+        android:text="Audio Refresher"
+        android:textSize="36sp"
         android:textStyle="bold"
-        android:layout_marginBottom="30dp"/>
+        android:textColor="#FFFFFF"
+        android:layout_marginBottom="50dp"/>
 
     <TextView
         android:id="@+id/tv_usage_status"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="使用情况权限：检测中..."
-        android:layout_marginBottom="10dp"/>
+        android:text="使用情况权限: 未检查"
+        android:textSize="16sp"
+        android:textColor="#BBBBBB"
+        android:layout_marginBottom="8dp"/>
 
     <TextView
         android:id="@+id/tv_shizuku_status"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Shizuku 授权：检测中..."
-        android:layout_marginBottom="10dp"/>
+        android:text="Shizuku 权限: 未检查"
+        android:textSize="16sp"
+        android:textColor="#BBBBBB"
+        android:layout_marginBottom="30dp"/>
 
+    <!-- 刷新次数：改为白色 -->
     <TextView
         android:id="@+id/tv_refresh_count"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="已自动刷新次数：0"
-        android:textSize="18sp"
-        android:textColor="@android:color/holo_blue_dark"
-        android:layout_marginTop="20dp"/>
+        android:text="刷新次数: 0"
+        android:textSize="28sp"
+        android:textStyle="bold"
+        android:textColor="#FFFFFF"
+        android:layout_marginBottom="40dp"/>
 
     <Button
         android:id="@+id/btn_start"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="30dp"
-        android:text="手动检查并启动服务"/>
+        android:layout_width="220dp"
+        android:layout_height="60dp"
+        android:text="启动监控"
+        android:textSize="18sp"
+        android:backgroundTint="#3F51B5"
+        android:textColor="#FFFFFF"/>
 
 </LinearLayout>
