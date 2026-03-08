@@ -42,14 +42,13 @@ public class MainActivity extends AppCompatActivity {
 
         findViewById(R.id.btn_start).setOnClickListener(v -> checkPermissionsAndStart());
 
-        // 使用 ContextCompat 注册广播，这是解决 Android 14 强制 Flag 报错的标准官方做法
+        // --- 必须这样写才能解决 Android 14 闪退 ---
         IntentFilter filter = new IntentFilter(MonitorService.ACTION_UPDATE_UI);
-
         androidx.core.content.ContextCompat.registerReceiver(
                 this,
                 uiReceiver,
                 filter,
-                androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED
+                androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED // 明确指定不公开
         );
     }
 
