@@ -47,6 +47,11 @@ public class MonitorService extends Service {
                 .getStringSet("target_pkgs", defaultSet);
     }
 
+    private java.util.Set<String> getExtremePackages() {
+        return getSharedPreferences("config", MODE_PRIVATE)
+                .getStringSet("extreme_pkgs", new java.util.HashSet<>());
+    }
+
     @Override
     public void onCreate() {
         super.onCreate();
@@ -69,7 +74,9 @@ public class MonitorService extends Service {
         @Override
         public void onReceive(Context context, Intent intent) {
             if (Intent.ACTION_SCREEN_OFF.equals(intent.getAction())) {
-                refreshMediaStatus("屏幕关闭", "系统广播");
+                // 如果熄屏前最后活跃的是极端应用，则用极端模式刷新
+                boolean useExtreme = getExtremePackages().contains(lastForegroundApp);
+                refreshMediaStatus("屏幕关闭", "系统广播", useExtreme);
             }
         }
     };
@@ -80,17 +87,27 @@ public class MonitorService extends Service {
             try {
                 String currentApp = getTopPackageName();
                 java.util.Set<String> targets = getTargetPackages();
+                java.util.Set<String> extremeTargets = getExtremePackages();
+
                 if (currentApp.isEmpty()) return;
 
-                if (targets.contains(currentApp)) {
+                // 只要在任意一个名单内，就记录为活跃
+                if (targets.contains(currentApp) || extremeTargets.contains(currentApp)) {
                     if (!currentApp.equals(lastForegroundApp)) {
                         lastForegroundApp = currentApp;
                     }
                 } else {
                     if (!lastForegroundApp.isEmpty()) {
                         String targetApp = lastForegroundApp;
-                        refreshMediaStatus("应用失焦", targetApp);
-                        lastForegroundApp = ""; // 触发后立即清空，保证单次触发
+
+                        // --- 核心逻辑：判断使用哪种模式 ---
+                        if (extremeTargets.contains(targetApp)) {
+                            refreshMediaStatus("应用失焦(极端模式)", targetApp, true);
+                        } else {
+                            refreshMediaStatus("应用失焦(普通模式)", targetApp, false);
+                        }
+
+                        lastForegroundApp = "";
                     }
                 }
             } catch (Exception e) {
@@ -114,15 +131,13 @@ public class MonitorService extends Service {
         return topPackage;
     }
 
-    private void refreshMediaStatus(String reason, String targetApp) {
-        // 1. 防抖：1秒内不重复刷新
+    // 修改后的刷新方法，增加 isExtreme 参数
+    private void refreshMediaStatus(String reason, String targetApp, boolean isExtreme) {
         long currentTime = System.currentTimeMillis();
         if (currentTime - lastRefreshTime < 1000) return;
 
-        // 2. 检查 Shizuku
         if (!Shizuku.pingBinder()) return;
 
-        // 3. 检查音频状态：只有在播放时才刷新
         android.media.AudioManager audioManager = (android.media.AudioManager) getSystemService(Context.AUDIO_SERVICE);
         if (audioManager != null && !audioManager.isMusicActive()) {
             Log.d(TAG, "跳过刷新: 当前无音频播放 (来源: " + reason + ")");
@@ -133,15 +148,22 @@ public class MonitorService extends Service {
 
         new Thread(() -> {
             try {
-                // 打印详细日志
-                Log.i(TAG, ">>> 执行刷新! 原因: " + reason + " | 针对App: " + targetApp);
+                Log.i(TAG, ">>> 执行刷新! 模式: " + (isExtreme ? "极端" : "普通") + " | 原因: " + reason + " | 针对App: " + targetApp);
 
-                Shizuku.newProcess(new String[]{"cmd", "media_session", "dispatch", "pause"}, null, null).waitFor();
-                Shizuku.newProcess(new String[]{"cmd", "media_session", "dispatch", "play"}, null, null).waitFor();
+                if (isExtreme) {
+                    // 极端模式：模拟物理按键 (127=暂停, 126=播放)
+                    Shizuku.newProcess(new String[]{"input", "keyevent", "127"}, null, null).waitFor();
+                    Thread.sleep(50); // 极端模式稍微给一点物理响应时间
+                    Shizuku.newProcess(new String[]{"input", "keyevent", "126"}, null, null).waitFor();
+                } else {
+                    // 普通模式：标准媒体会话指令
+                    Shizuku.newProcess(new String[]{"cmd", "media_session", "dispatch", "pause"}, null, null).waitFor();
+                    Shizuku.newProcess(new String[]{"cmd", "media_session", "dispatch", "play"}, null, null).waitFor();
+                }
 
                 refreshCount++;
                 ServiceStatusManager.updateCount(refreshCount);
-                updateNotification("已刷新 " + refreshCount + " 次 (来源: " + reason + ")");
+                updateNotification("已刷新 " + refreshCount + " 次 (" + (isExtreme ? "极端" : "普通") + ")");
             } catch (Exception e) {
                 Log.e(TAG, "Shizuku 执行异常: " + e.getMessage());
             }

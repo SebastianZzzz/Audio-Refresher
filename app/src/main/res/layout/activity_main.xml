@@ -1,77 +1,100 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<!-- 1. 外层改为 RelativeLayout 以支持右下角悬浮定位 -->
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:gravity="center"
-    android:padding="20dp"
-    android:background="?android:attr/windowBackground">
+    android:background="?android:attr/windowBackground"
+    android:padding="20dp">
 
-    <!-- 顶部大标题 -->
-    <TextView
+    <!-- 2. 原有的 UI 内容放入一个居中的 LinearLayout 中 -->
+    <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Audio Refresher"
-        android:textSize="36sp"
-        android:textStyle="bold"
-        android:textColor="#FFFFFF"
-        android:layout_marginBottom="50dp"/>
+        android:layout_centerInParent="true"
+        android:gravity="center"
+        android:orientation="vertical">
 
-    <TextView
-        android:id="@+id/tv_usage_status"
+        <!-- 顶部大标题 -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="50dp"
+            android:text="Audio Refresher"
+            android:textColor="#FFFFFF"
+            android:textSize="36sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tv_usage_status"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="10dp"
+            android:text="使用情况权限: 未检查"
+            android:textColor="?android:attr/textColorPrimary"
+            android:textSize="16sp" />
+
+        <TextView
+            android:id="@+id/tv_shizuku_status"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="10dp"
+            android:text="Shizuku 权限: 未检查"
+            android:textColor="?android:attr/textColorPrimary"
+            android:textSize="16sp" />
+
+        <TextView
+            android:id="@+id/tv_notification_status"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="40dp"
+            android:text="通知权限：未检查"
+            android:textColor="?android:attr/textColorPrimary"
+            android:textSize="16sp" />
+
+        <!-- 刷新次数 -->
+        <TextView
+            android:id="@+id/tv_refresh_count"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="40dp"
+            android:text="刷新次数: 0"
+            android:textColor="?android:attr/textColorPrimary"
+            android:textSize="28sp"
+            android:textStyle="bold" />
+
+        <Button
+            android:id="@+id/btn_select_apps"
+            android:layout_width="220dp"
+            android:layout_height="60dp"
+            android:layout_marginBottom="16dp"
+            android:backgroundTint="#3F51B5"
+            android:text="选择被监听软件"
+            android:textColor="#FFFFFF"
+            android:textSize="18sp" />
+
+        <Button
+            android:id="@+id/btn_start"
+            android:layout_width="220dp"
+            android:layout_height="60dp"
+            android:backgroundTint="#3F51B5"
+            android:text="启动监控"
+            android:textColor="#FFFFFF"
+            android:textSize="18sp" />
+    </LinearLayout>
+
+    <!-- 3. 极端模式选择按钮：放在 RelativeLayout 的最后，实现右下角悬浮 -->
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fab_extreme"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="使用情况权限: 未检查"
-        android:textSize="16sp"
-        android:textColor="?android:attr/textColorPrimary"
-        android:layout_marginBottom="10dp"/>
+        android:layout_alignParentEnd="true"
+        android:layout_alignParentBottom="true"
+        android:layout_margin="16dp"
+        android:contentDescription="选择极端模式应用"
+        android:src="@android:drawable/ic_menu_edit"
+        app:backgroundTint="#F44336"
+        app:fabSize="mini"
+        app:tint="#FFFFFF" />
 
-    <TextView
-        android:id="@+id/tv_shizuku_status"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Shizuku 权限: 未检查"
-        android:textSize="16sp"
-        android:textColor="?android:attr/textColorPrimary"
-        android:layout_marginBottom="10dp"/>
-
-    <TextView
-        android:id="@+id/tv_notification_status"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="通知权限：未检查"
-        android:textSize="16sp"
-        android:textColor="?android:attr/textColorPrimary"
-        android:layout_marginBottom="40dp"/>
-
-    <!-- 刷新次数：改为白色 -->
-    <TextView
-        android:id="@+id/tv_refresh_count"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="刷新次数: 0"
-        android:textSize="28sp"
-        android:textStyle="bold"
-        android:textColor="?android:attr/textColorPrimary"
-        android:layout_marginBottom="40dp"/>
-
-    <Button
-        android:id="@+id/btn_select_apps"
-        android:layout_width="220dp"
-        android:layout_height="60dp"
-        android:text="选择被监听软件"
-        android:textSize="18sp"
-        android:backgroundTint="#3F51B5"
-        android:textColor="#FFFFFF"
-        android:layout_marginBottom="16dp"/>
-
-    <Button
-        android:id="@+id/btn_start"
-        android:layout_width="220dp"
-        android:layout_height="60dp"
-        android:text="启动监控"
-        android:textSize="18sp"
-        android:backgroundTint="#3F51B5"
-        android:textColor="#FFFFFF"/>
-
-</LinearLayout>
+</RelativeLayout>

@@ -4,6 +4,7 @@ import android.app.AppOpsManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.content.res.ColorStateList;
@@ -18,6 +19,9 @@ import android.widget.Toast;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
+
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -28,6 +32,8 @@ public class MainActivity extends AppCompatActivity {
 
     private TextView tvUsageStatus, tvShizukuStatus, tvNotificationStatus, tvRefreshCount;
     private Button btnStart;
+    private Button btnSelectApps;
+    private FloatingActionButton fabExtreme;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -60,10 +66,22 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        Button btnSelectApps = findViewById(R.id.btn_select_apps);
+        btnSelectApps = findViewById(R.id.btn_select_apps);
         btnSelectApps.setBackgroundTintList(ColorStateList.valueOf(Color.parseColor("#4CAF50")));
+        // 1. 普通模式按钮
         btnSelectApps.setOnClickListener(v -> {
-            startActivity(new Intent(this, AppSelectActivity.class));
+            Intent intent = new Intent(this, AppSelectActivity.class);
+            intent.putExtra("is_extreme", false); // 标记为普通模式
+            startActivity(intent);
+        });
+
+
+        fabExtreme = findViewById(R.id.fab_extreme);
+        // 2. 极端模式按钮 (红色 FAB)
+        fabExtreme.setOnClickListener(v -> {
+            Intent intent = new Intent(this, AppSelectActivity.class);
+            intent.putExtra("is_extreme", true); // 标记为极端模式
+            startActivity(intent);
         });
     }
 
@@ -80,7 +98,11 @@ public class MainActivity extends AppCompatActivity {
 
         // 获取当前监控的应用数量
         int selectedCount = getSavedPackages().size();
-        tvUsageStatus.setText(hasUsage ? "已监控 " + selectedCount + " 个应用" : "使用情况权限：未获得 (点击修复)");
+        int extremeCount = getSharedPreferences("config", MODE_PRIVATE)
+                .getStringSet("extreme_pkgs", new HashSet<>()).size();
+        tvUsageStatus.setText(hasUsage ?
+                "已监控: 普通 " + selectedCount + " | 极端 " + extremeCount :
+                "使用情况权限：未获得 (点击修复)");
         tvUsageStatus.setTextColor(hasUsage ? Color.parseColor("#4CAF50") : Color.parseColor("#F44336"));
 
         if (Shizuku.pingBinder()) {
