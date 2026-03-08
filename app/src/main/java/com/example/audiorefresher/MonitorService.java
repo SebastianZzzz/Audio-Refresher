@@ -33,6 +33,8 @@ public class MonitorService extends Service {
     private String lastForegroundApp = "";
     public static int refreshCount = 0;
 
+    private long lastRefreshTime = 0; // 用于防抖
+
     // 2. 新增：动态获取目标包名的方法
     // 修改后的方法：获取用户选择的所有包名集合
     private java.util.Set<String> getTargetPackages() {
@@ -49,17 +51,12 @@ public class MonitorService extends Service {
     public void onCreate() {
         super.onCreate();
         ServiceStatusManager.setRunning(true);
-        Log.d(TAG, "Service onCreate: 服务正在创建");
         createNotificationChannel();
-
-        // 更新通知显示当前正在监控哪个包
         startForeground(1, getNotification("监控中: " + getTargetPackages()));
 
         try {
             IntentFilter filter = new IntentFilter();
-            filter.addAction(Intent.ACTION_SCREEN_OFF);
-            filter.addAction(Intent.ACTION_SCREEN_ON);
-            filter.addAction(Intent.ACTION_USER_PRESENT);
+            filter.addAction(Intent.ACTION_SCREEN_OFF); // 只保留熄屏，亮屏和解锁没必要刷新
             registerReceiver(screenReceiver, filter);
         } catch (Exception e) {
             Log.e(TAG, "注册广播失败: " + e.getMessage());
@@ -71,32 +68,31 @@ public class MonitorService extends Service {
     private final BroadcastReceiver screenReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            // 屏幕动作触发时直接刷新
-            refreshMediaStatus();
+            if (Intent.ACTION_SCREEN_OFF.equals(intent.getAction())) {
+                refreshMediaStatus("屏幕关闭", "系统广播");
+            }
         }
     };
 
     private void startPolling() {
-        Log.d(TAG, "开始轮询线程...");
         scheduler = Executors.newSingleThreadScheduledExecutor();
-
         scheduler.scheduleWithFixedDelay(() -> {
             try {
                 String currentApp = getTopPackageName();
-                // 获取当前选中的所有目标 App 集合
                 java.util.Set<String> targets = getTargetPackages();
+                if (currentApp.isEmpty()) return;
 
-                // 核心逻辑修改：
-                // 如果“刚才”的应用在名单中，且“现在”的应用不在名单中（说明发生了失焦/切出）
-                if (targets.contains(lastForegroundApp) && !targets.contains(currentApp)) {
-                    Log.d(TAG, "检测到监控名单中的 App 失焦: " + lastForegroundApp + " -> " + currentApp);
-                    refreshMediaStatus();
+                if (targets.contains(currentApp)) {
+                    if (!currentApp.equals(lastForegroundApp)) {
+                        lastForegroundApp = currentApp;
+                    }
+                } else {
+                    if (!lastForegroundApp.isEmpty()) {
+                        String targetApp = lastForegroundApp;
+                        refreshMediaStatus("应用失焦", targetApp);
+                        lastForegroundApp = ""; // 触发后立即清空，保证单次触发
+                    }
                 }
-
-                if (!currentApp.isEmpty()) {
-                    lastForegroundApp = currentApp;
-                }
-
             } catch (Exception e) {
                 Log.e(TAG, "轮询异常: " + e.getMessage());
             }
@@ -118,25 +114,34 @@ public class MonitorService extends Service {
         return topPackage;
     }
 
-    private void refreshMediaStatus() {
+    private void refreshMediaStatus(String reason, String targetApp) {
+        // 1. 防抖：1秒内不重复刷新
+        long currentTime = System.currentTimeMillis();
+        if (currentTime - lastRefreshTime < 1000) return;
+
+        // 2. 检查 Shizuku
         if (!Shizuku.pingBinder()) return;
+
+        // 3. 检查音频状态：只有在播放时才刷新
+        android.media.AudioManager audioManager = (android.media.AudioManager) getSystemService(Context.AUDIO_SERVICE);
+        if (audioManager != null && !audioManager.isMusicActive()) {
+            Log.d(TAG, "跳过刷新: 当前无音频播放 (来源: " + reason + ")");
+            return;
+        }
+
+        lastRefreshTime = currentTime;
 
         new Thread(() -> {
             try {
-                // 执行 pause/play 刷新
-                rikka.shizuku.ShizukuRemoteProcess p1 = Shizuku.newProcess(
-                        new String[]{"cmd", "media_session", "dispatch", "pause"}, null, null);
-                p1.waitFor();
+                // 打印详细日志
+                Log.i(TAG, ">>> 执行刷新! 原因: " + reason + " | 针对App: " + targetApp);
 
-                rikka.shizuku.ShizukuRemoteProcess p2 = Shizuku.newProcess(
-                        new String[]{"cmd", "media_session", "dispatch", "play"}, null, null);
-                p2.waitFor();
+                Shizuku.newProcess(new String[]{"cmd", "media_session", "dispatch", "pause"}, null, null).waitFor();
+                Shizuku.newProcess(new String[]{"cmd", "media_session", "dispatch", "play"}, null, null).waitFor();
 
                 refreshCount++;
                 ServiceStatusManager.updateCount(refreshCount);
-                int targetCount = getTargetPackages().size();
-                updateNotification("正在监控 " + targetCount + " 个应用 (已刷新 " + refreshCount + " 次)");
-
+                updateNotification("已刷新 " + refreshCount + " 次 (来源: " + reason + ")");
             } catch (Exception e) {
                 Log.e(TAG, "Shizuku 执行异常: " + e.getMessage());
             }
