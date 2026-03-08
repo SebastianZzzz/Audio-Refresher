@@ -32,10 +32,12 @@ public class MonitorService extends Service {
     private ScheduledExecutorService scheduler;
     private String lastForegroundApp = "";
     public static int refreshCount = 0;
+    public static boolean isRunning = false;
 
     @Override
     public void onCreate() {
         super.onCreate();
+        isRunning = true; // 1. 服务创建时标记为运行中
         Log.d(TAG, "Service onCreate: 服务正在创建");
         createNotificationChannel();
         startForeground(1, getNotification("服务已启动，等待监控..."));
@@ -179,10 +181,21 @@ public class MonitorService extends Service {
     @Override
     public void onDestroy() {
         Log.d(TAG, "Service onDestroy: 服务正在销毁");
+
+        // 2. 停止轮询线程
+        if (scheduler != null) {
+            scheduler.shutdownNow(); // 强制停止所有待处理任务
+        }
+
         try {
             unregisterReceiver(screenReceiver);
         } catch (Exception ignored) {}
+
+        // 4. 移除前台通知 (虽然 stopService 会自动移除，但手动移除更保险)
+        stopForeground(true);
+
         if (scheduler != null) scheduler.shutdown();
+        isRunning = false; // 停止时重置状态
         super.onDestroy();
     }
 }
