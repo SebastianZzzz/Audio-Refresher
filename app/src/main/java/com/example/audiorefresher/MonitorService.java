@@ -32,12 +32,11 @@ public class MonitorService extends Service {
     private ScheduledExecutorService scheduler;
     private String lastForegroundApp = "";
     public static int refreshCount = 0;
-    public static boolean isRunning = false;
 
     @Override
     public void onCreate() {
         super.onCreate();
-        isRunning = true; // 1. 服务创建时标记为运行中
+        ServiceStatusManager.setRunning(true);
         Log.d(TAG, "Service onCreate: 服务正在创建");
         createNotificationChannel();
         startForeground(1, getNotification("服务已启动，等待监控..."));
@@ -144,6 +143,7 @@ public class MonitorService extends Service {
 
                 // 3. 逻辑处理
                 refreshCount++;
+                ServiceStatusManager.updateCount(refreshCount);
                 Log.d(TAG, "刷新指令执行完毕，当前总次数: " + refreshCount);
 
                 updateNotification("已成功刷新播放状态 (" + refreshCount + " 次)");
@@ -218,7 +218,7 @@ public class MonitorService extends Service {
         stopForeground(true);
 
         if (scheduler != null) scheduler.shutdown();
-        isRunning = false; // 停止时重置状态
+        ServiceStatusManager.setRunning(false);
         super.onDestroy();
     }
 }

@@ -41,16 +41,30 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        // 初始化视图
+        // 1. 初始化视图
         tvUsageStatus = findViewById(R.id.tv_usage_status);
         tvShizukuStatus = findViewById(R.id.tv_shizuku_status);
-        tvNotificationStatus = findViewById(R.id.tv_notification_status); // 请确保 XML 中有此 ID
+        tvNotificationStatus = findViewById(R.id.tv_notification_status);
         tvRefreshCount = findViewById(R.id.tv_refresh_count);
         btnStart = findViewById(R.id.btn_start);
 
-        // 按钮点击逻辑：根据服务状态决定动作
+        // 2. 【观察者模式】监听服务运行状态
+        ServiceStatusManager.isRunning.observe(this, running -> {
+            // 当 ServiceStatus.isRunning 的值改变时，这里会自动触发
+            updateStatusUI();
+        });
+
+        // 3. 【观察者模式】监听计数器变化
+        ServiceStatusManager.refreshCount.observe(this, count -> {
+            // 当计数增加时，UI 自动更新数字，无需广播
+            tvRefreshCount.setText("刷新次数: " + count);
+        });
+
+        // 4. 按钮点击逻辑
         btnStart.setOnClickListener(v -> {
-            if (MonitorService.isRunning) {
+            // 这里依然判断当前状态来决定启动还是停止
+            Boolean running = ServiceStatusManager.isRunning.getValue();
+            if (running != null && running) {
                 stopMonitorService();
             } else {
                 checkPermissionsAndStart();
@@ -120,7 +134,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         // 4. 动态修改按钮状态 (核心逻辑)
-        if (MonitorService.isRunning) {
+        if (ServiceStatusManager.isRunning.getValue()) {
             // 状态：已启动 -> 红色“暂停服务”
             btnStart.setText("暂停服务");
             btnStart.setBackgroundTintList(ColorStateList.valueOf(Color.parseColor("#F44336"))); // 红色
