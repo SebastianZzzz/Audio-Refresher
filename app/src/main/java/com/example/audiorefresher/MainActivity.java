@@ -41,15 +41,24 @@ public class MainActivity extends AppCompatActivity {
         tvRefreshCount = findViewById(R.id.tv_refresh_count);
 
         findViewById(R.id.btn_start).setOnClickListener(v -> checkPermissionsAndStart());
+    }
 
-        // --- 必须这样写才能解决 Android 14 闪退 ---
+    @Override
+    protected void onStart() {
+        super.onStart();
+        // 1. 每次回到界面，先手动同步一次 Service 里的最新数字
+        // 注意：这需要你在 MonitorService 里把 refreshCount 变量设为 public static
+        tvRefreshCount.setText("刷新次数: " + MonitorService.refreshCount);
+
+        // 2. 注册广播，确保 Activity 在前台时能实时收到更新
         IntentFilter filter = new IntentFilter(MonitorService.ACTION_UPDATE_UI);
         androidx.core.content.ContextCompat.registerReceiver(
                 this,
                 uiReceiver,
                 filter,
-                androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED // 明确指定不公开
+                androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED
         );
+        Log.d("BiliMonitorLog", "MainActivity: 广播已在 onStart 注册");
     }
 
     @Override
@@ -131,8 +140,20 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
+    protected void onStop() {
+        super.onStop();
+        // 当 Activity 不可见时，注销广播接收器，防止内存泄漏
+        try {
+            unregisterReceiver(uiReceiver);
+            Log.d("BiliMonitorLog", "MainActivity: 广播已在 onStop 注销");
+        } catch (Exception e) {
+            // 忽略未注册时的异常
+        }
+    }
+
+    @Override
     protected void onDestroy() {
         super.onDestroy();
-        unregisterReceiver(uiReceiver);
+        // 这里可以留空，或者只做最后的清理
     }
 }

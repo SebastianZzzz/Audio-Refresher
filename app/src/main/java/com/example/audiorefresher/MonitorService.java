@@ -31,7 +31,7 @@ public class MonitorService extends Service {
 
     private ScheduledExecutorService scheduler;
     private String lastForegroundApp = "";
-    private int refreshCount = 0;
+    public static int refreshCount = 0;
 
     @Override
     public void onCreate() {
