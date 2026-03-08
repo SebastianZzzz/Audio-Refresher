@@ -17,6 +17,19 @@
         android:layout_marginBottom="16dp"
         android:textColor="?android:attr/textColorPrimary"/>
 
+    <EditText
+        android:id="@+id/et_search"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="搜索应用名称或包名..."
+        android:padding="12dp"
+        android:layout_margin="8dp"
+        android:background="@android:drawable/editbox_background"
+        android:textColorHint="@android:color/black"
+        android:drawableStart="@android:drawable/ic_menu_search"
+        android:maxLines="1"
+        android:inputType="text"/>
+
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rv_app_list"
         android:layout_width="match_parent"

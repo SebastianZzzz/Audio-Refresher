@@ -9,6 +9,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.CheckBox;
+import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -28,6 +29,8 @@ public class AppSelectActivity extends AppCompatActivity {
     private Set<String> selectedPkgs;
     private SharedPreferences prefs;
     private List<ApplicationInfo> displayApps;
+    private List<ApplicationInfo> fullApps; // 存放所有应用（不随搜索改变）
+    private EditText etSearch;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -79,19 +82,60 @@ public class AppSelectActivity extends AppCompatActivity {
             return name1.compareToIgnoreCase(name2);
         });
 
-        // 4. 初始化 RecyclerView
+        // 4. 初始化搜索框逻辑
+        fullApps = new ArrayList<>(displayApps);
+        etSearch = findViewById(R.id.et_search);
+        etSearch.addTextChangedListener(new android.text.TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                filterApps(s.toString(), nameCache);
+            }
+
+            @Override
+            public void afterTextChanged(android.text.Editable s) {}
+        });
+
+        // 5. 初始化 RecyclerView
         RecyclerView recyclerView = findViewById(R.id.rv_app_list);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         AppAdapter adapter = new AppAdapter();
         recyclerView.setAdapter(adapter);
 
-        // 5. 保存按钮
+        // 6. 保存按钮
         Button btnSave = findViewById(R.id.btn_save_selection);
         btnSave.setOnClickListener(v -> {
             prefs.edit().putStringSet(configKey, selectedPkgs).apply();
             Toast.makeText(this, "配置已保存", Toast.LENGTH_SHORT).show();
             finish();
         });
+    }
+
+    private void filterApps(String query, java.util.Map<String, String> nameCache) {
+        String lowerQuery = query.toLowerCase().trim();
+        displayApps.clear();
+
+        if (lowerQuery.isEmpty()) {
+            displayApps.addAll(fullApps);
+        } else {
+            for (ApplicationInfo app : fullApps) {
+                String name = nameCache.get(app.packageName).toLowerCase();
+                String pkg = app.packageName.toLowerCase();
+
+                // 如果名字或包名包含搜索词，则加入显示列表
+                if (name.contains(lowerQuery) || pkg.contains(lowerQuery)) {
+                    displayApps.add(app);
+                }
+            }
+        }
+
+        // 刷新列表显示
+        RecyclerView recyclerView = findViewById(R.id.rv_app_list);
+        if (recyclerView != null && recyclerView.getAdapter() != null) {
+            recyclerView.getAdapter().notifyDataSetChanged();
+        }
     }
 
     // 内部适配器：匹配你现有的 item_app.xml
