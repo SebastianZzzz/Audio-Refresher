@@ -45,6 +45,8 @@ public class MonitorService extends Service {
         try {
             IntentFilter filter = new IntentFilter();
             filter.addAction(Intent.ACTION_SCREEN_OFF);
+            filter.addAction(Intent.ACTION_SCREEN_ON);   // 亮屏瞬间触发
+            filter.addAction(Intent.ACTION_USER_PRESENT); // 解锁瞬间触发
             registerReceiver(screenReceiver, filter);
             Log.d(TAG, "BroadcastReceiver 注册成功");
         } catch (Exception e) {
@@ -61,26 +63,41 @@ public class MonitorService extends Service {
                 Log.d(TAG, "接收到息屏广播");
                 refreshMediaStatus();
             }
+            if (Intent.ACTION_SCREEN_ON.equals(intent.getAction()) ||
+                    Intent.ACTION_USER_PRESENT.equals(intent.getAction())) {
+                Log.d(TAG, "检测到亮屏/解锁，立即强制刷新");
+                refreshMediaStatus(); // 不等轮询，直接冲
+            }
         }
     };
 
     private void startPolling() {
         Log.d(TAG, "开始轮询线程...");
         scheduler = Executors.newSingleThreadScheduledExecutor();
-        scheduler.scheduleAtFixedRate(() -> {
+
+        // 使用 scheduleWithFixedDelay 替代 scheduleAtFixedRate
+        // 区别：它会在上一次任务执行完后，再等待 1500ms 才开始下一次，防止任务堆积
+        scheduler.scheduleWithFixedDelay(() -> {
             try {
                 String currentApp = getTopPackageName();
+
+                // 逻辑优化：只有当上次是 B站，这次不是 B站时才触发
                 if (TARGET_PKG.equals(lastForegroundApp) && !TARGET_PKG.equals(currentApp)) {
                     Log.d(TAG, "检测到 B站 失焦: " + lastForegroundApp + " -> " + currentApp);
                     refreshMediaStatus();
                 }
-                lastForegroundApp = currentApp;
+
+                // 只有当获取到的包名不为空时才更新 lastForegroundApp
+                // 防止因为系统临时卡顿获取到空包名导致误判
+                if (!currentApp.isEmpty()) {
+                    lastForegroundApp = currentApp;
+                }
+
             } catch (Exception e) {
                 Log.e(TAG, "轮询异常: " + e.getMessage());
             }
-        }, 0, 1500, TimeUnit.MILLISECONDS);
+        }, 0, 500, TimeUnit.MILLISECONDS);
     }
-
     private String getTopPackageName() {
         UsageStatsManager usm = (UsageStatsManager) getSystemService(Context.USAGE_STATS_SERVICE);
         long now = System.currentTimeMillis();
@@ -100,8 +117,6 @@ public class MonitorService extends Service {
 
     private void refreshMediaStatus() {
         Log.d(TAG, "准备刷新媒体状态...");
-
-        // 强制先更新一下通知，证明逻辑跑到了这里
         updateNotification("正在尝试刷新 B 站状态...");
 
         if (!Shizuku.pingBinder()) {
@@ -112,25 +127,33 @@ public class MonitorService extends Service {
 
         new Thread(() -> {
             try {
-                // 尝试执行命令
-                Log.d(TAG, "执行 Shell 命令...");
-                Process p1 = Shizuku.newProcess(new String[]{"cmd", "media_session", "dispatch", "pause"}, null, null);
+                Log.d(TAG, "开始执行 Shizuku 媒体刷新指令...");
+
+                // 方案：使用 Shizuku.newProcess 并显式指定返回类型为 rikka.shizuku.ShizukuRemoteProcess
+                // 如果你的 SDK 提示 newExternalProcess 找不到，说明你引用的版本中它可能在 Shizuku.newProcess 内部实现了
+
+                // 1. 执行 pause
+                rikka.shizuku.ShizukuRemoteProcess p1 = Shizuku.newProcess(
+                        new String[]{"cmd", "media_session", "dispatch", "pause"}, null, null);
                 p1.waitFor();
-                Thread.sleep(500);
-                Process p2 = Shizuku.newProcess(new String[]{"cmd", "media_session", "dispatch", "play"}, null, null);
+
+                // 2. 执行 play
+                rikka.shizuku.ShizukuRemoteProcess p2 = Shizuku.newProcess(
+                        new String[]{"cmd", "media_session", "dispatch", "play"}, null, null);
                 p2.waitFor();
 
+                // 3. 逻辑处理
                 refreshCount++;
-                Log.d(TAG, "刷新成功，当前次数: " + refreshCount);
+                Log.d(TAG, "刷新指令执行完毕，当前总次数: " + refreshCount);
 
-                // 更新通知和 UI
                 updateNotification("已成功刷新播放状态 (" + refreshCount + " 次)");
 
                 Intent intent = new Intent(ACTION_UPDATE_UI);
                 intent.putExtra("count", refreshCount);
                 sendBroadcast(intent);
+
             } catch (Exception e) {
-                Log.e(TAG, "Shizuku 执行失败: " + e.getMessage());
+                Log.e(TAG, "Shizuku 指令执行异常: " + e.getMessage());
                 updateNotification("刷新失败: " + e.getMessage());
             }
         }).start();
