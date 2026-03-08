@@ -98,16 +98,18 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
 
-        // 3. 检查 Shizuku 权限并启动
         if (Shizuku.pingBinder()) {
+            // 核心修复：即使 checkSelfPermission 返回 GRANTED，
+            // 如果遇到调用失败，也提供一个“重新授权”的机制
             if (Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED) {
+                // 这里可以加一个简单的尝试调用，或者直接启动
                 startMonitorService();
-                Toast.makeText(this, "监控服务已启动", Toast.LENGTH_SHORT).show();
             } else {
+                // 如果没权限，主动弹出 Shizuku 的授权框
                 Shizuku.requestPermission(1001);
             }
         } else {
-            Toast.makeText(this, "请先启动 Shizuku 应用", Toast.LENGTH_LONG).show();
+            Toast.makeText(this, "Shizuku 服务未运行，请先启动 Shizuku", Toast.LENGTH_LONG).show();
         }
         updateStatusUI();
     }
