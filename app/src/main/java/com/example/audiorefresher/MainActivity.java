@@ -42,17 +42,15 @@ public class MainActivity extends AppCompatActivity {
 
         findViewById(R.id.btn_start).setOnClickListener(v -> checkPermissionsAndStart());
 
-        // --- 修改后的注册逻辑 ---
+        // 使用 ContextCompat 注册广播，这是解决 Android 14 强制 Flag 报错的标准官方做法
         IntentFilter filter = new IntentFilter(MonitorService.ACTION_UPDATE_UI);
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-            // Android 13 (API 33) 及以上版本需要增加 RECEIVER_NOT_EXPORTED 标志
-            // 这表示该广播仅限应用内部使用，不接收外部应用的广播，符合安全要求
-            registerReceiver(uiReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
-        } else {
-            // 旧版本保持不变
-            registerReceiver(uiReceiver, filter);
-        }
-        // -----------------------
+
+        androidx.core.content.ContextCompat.registerReceiver(
+                this,
+                uiReceiver,
+                filter,
+                androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED
+        );
     }
 
     @Override

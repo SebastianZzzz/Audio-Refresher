@@ -121,9 +121,19 @@ public class MonitorService extends Service {
         }).start();
     }
 
+    @SuppressWarnings("MissingPermission")
     private void updateNotification(String content) {
         NotificationManager manager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         if (manager != null) {
+            // 针对 Android 13+ 的运行时权限检查
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                if (androidx.core.content.ContextCompat.checkSelfPermission(this,
+                        android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                    Log.e(TAG, "无法更新通知：未获得 POST_NOTIFICATIONS 权限");
+                    return;
+                }
+            }
+            // 已经过上方权限检查或处于旧版本系统，可以安全调用
             manager.notify(1, getNotification(content));
         }
     }
