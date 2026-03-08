@@ -84,20 +84,27 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void checkPermissionsAndStart() {
+        // 1. 检查通知权限 (Android 13+)
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            if (checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(new String[]{android.Manifest.permission.POST_NOTIFICATIONS}, 1002);
+                return; // 等用户授权后再点一次
+            }
+        }
+
+        // 2. 检查使用情况权限
         if (!hasUsageStatsPermission()) {
             startActivity(new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS));
             return;
         }
 
+        // 3. 检查 Shizuku 权限并启动
         if (Shizuku.pingBinder()) {
             if (Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED) {
                 startMonitorService();
                 Toast.makeText(this, "监控服务已启动", Toast.LENGTH_SHORT).show();
             } else {
                 Shizuku.requestPermission(1001);
-                Shizuku.addRequestPermissionResultListener((requestCode, grantResult) -> {
-                    if (grantResult == PackageManager.PERMISSION_GRANTED) startMonitorService();
-                });
             }
         } else {
             Toast.makeText(this, "请先启动 Shizuku 应用", Toast.LENGTH_LONG).show();
